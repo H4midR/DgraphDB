@@ -2,15 +2,12 @@ package main
 
 /*eslint-disable */
 import (
-	"encoding/json"
-	"log"
-
 	"github.com/kataras/iris"
+
+	"DgraphDB/DataBaseServices"
 
 	"github.com/kataras/iris/middleware/logger"
 	"github.com/kataras/iris/middleware/recover"
-
-	"ehome/datamodels"
 )
 
 // this app use Iris as frame work , any other framework works too
@@ -41,14 +38,18 @@ func main() {
 
 	// Method:   GET
 	// Resource: http://localhost:8080
-	app.Handle("POST", "/", func(ctx iris.Context) {
-		var Myuser datamodels.User
-		err := ctx.ReadForm(&Myuser)
-		if err != nil {
-			log.Fatal(err)
-		}
-		res, _ := json.Marshal(Myuser)
-		ctx.WriteString(string(res))
+	app.Handle("GET", "/", func(ctx iris.Context) {
+		mg := DataBaseServices.NewDgraphTrasn()
+		q := `
+			{
+				data(func:has(name)){
+					uid
+					expand(_all_)
+				}
+			}
+			`
+		response, _ := mg.Query(string(q))
+		ctx.Write(response)
 	})
 
 	// same as app.Handle("GET", "/ping", [...])

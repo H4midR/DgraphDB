@@ -4,7 +4,6 @@ package DataBaseServices
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/dgraph-io/dgo"
@@ -14,12 +13,13 @@ import (
 )
 
 type MygraphService interface {
-	Mutate(string) string
-	Query([]byte) []byte
-	VQuery([]byte, map[string]string) []byte
+	MutateRDF([]byte, string) interface{}
+	Mutate([]byte) (interface{}, map[string]string, error)
+	Query(string) ([]byte, error)
+	VQuery(string, map[string]string) ([]byte, error)
 }
 
-func NewMygraphService() *mygraphService {
+func NewDgraphTrasn() *mygraphService {
 	return &mygraphService{
 		key: "dgraph",
 		//dg:  newClient(),
@@ -85,30 +85,50 @@ func (s *mygraphService) MutateRDF(qry []byte, Ttype string) interface{} {
 }
 
 //Mutate : mutate the data base with json qry
-func (s *mygraphService) Mutate(qry []byte) (FULL interface{}, UIDs map[string]string) {
+// UIDs are map of string in the patern of blank-0 , blank-1 , ...
+func (s *mygraphService) Mutate(qry []byte) (FULL interface{}, UIDs map[string]string, err error) {
 	defer s.txn.Discard(context.Background())
 	res, err := s.txn.Mutate(context.Background(), &api.Mutation{
 		CommitNow: true,
 		SetJson:   qry,
 	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	return fmt.Sprint("%+v", res), res.Uids
+	return res, res.Uids, err
 }
 
-func (s *mygraphService) Query(qry string) []byte {
+//Query : query , format like
+/*
+	q=`{
+		data(func:uid(0xXXX)){
+			uid
+			expand(_all_)
+			...
+		}
+	}
+		`
+
+return json formated stirng and err
+*/
+func (s *mygraphService) Query(qry string) (jsonStr []byte, err error) {
 	res, err := s.txn.Query(context.Background(), qry)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return res.Json
+
+	return res.Json, err
 }
-func (s *mygraphService) VQuery(qry string, data map[string]string) []byte {
-	res, err := s.txn.QueryWithVars(context.Background(), qry, data)
-	if err != nil {
-		log.Fatal(err)
+
+//VQuery : query with variables , format like
+/*
+	q=`{
+		data(func:uid($uid)){
+			uid
+			expand(_all_)
+			...
+		}
 	}
-	return res.Json
+		`
+	data := map[string]string{"$id": "0xXXX"}
+
+return json formated stirng and err
+*/
+func (s *mygraphService) VQuery(qry string, data map[string]string) (jsonStr []byte, err error) {
+	res, err := s.txn.QueryWithVars(context.Background(), qry, data)
+	return res.Json, err
 }
