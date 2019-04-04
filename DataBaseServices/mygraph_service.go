@@ -85,7 +85,7 @@ func (s *mygraphService) MutateRDF(qry []byte, Ttype string) interface{} {
 }
 
 //Mutate : mutate the data base with json qry
-func (s *mygraphService) Mutate(qry []byte) (FULL string, UID string) {
+func (s *mygraphService) Mutate(qry []byte) (FULL interface{}, UIDs map[string]string) {
 	defer s.txn.Discard(context.Background())
 	res, err := s.txn.Mutate(context.Background(), &api.Mutation{
 		CommitNow: true,
@@ -95,7 +95,7 @@ func (s *mygraphService) Mutate(qry []byte) (FULL string, UID string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return fmt.Sprint("%+v", res), res.Uids["blank-0"]
+	return fmt.Sprint("%+v", res), res.Uids
 }
 
 func (s *mygraphService) Query(qry string) []byte {
